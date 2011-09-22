@@ -1,0 +1,60 @@
+<?xml version="1.0"?> 
+<!-- vim: set expandtab tabstop=4 shiftwidth=4: -->
+<project name="phantom-qunit">
+    <!-- Generate test report -->
+    <target name="test" depends="-prep-output, -run-phantomjs, -fail-status, -error-status, -success-status" description="Outputs test XML to ${test-report.dir}/${project.name}.${TSTAMP}.xml">
+        <echo>Test complete.</echo>
+    </target>
+
+
+    <!-- Internals -->
+    <tstamp/>
+
+    <dirname property="base.dir" file="${ant.file.phantom-qunit}"/>
+    
+    <property name="test-report.dir" value="test-reports"/>  
+    <property name="test.page" value="test.html"/>  
+    <property name="project.name" value="qunit"/>  
+
+    <property name="-phantom.pagefailed" value="1"/>
+    <property name="-phantom.testfailed" value="2"/>
+    <property name="-phantom.exception" value="3"/>
+
+    <target name="-prep-output">
+        <mkdir dir="${test-report.dir}"/>
+    </target>
+
+    <target name="-run-phantomjs">
+        <exec executable="phantomjs" output="${test-report.dir}/${project.name}.${TSTAMP}.xml" resultproperty="phantom.exit" errorproperty="test.errors">
+            <arg line="../scripts/phantomjs-driver.js ${test.page}"/>
+        </exec>
+
+        <condition property="phantom.testfailed">
+            <equals arg1="${phantom.exit}" arg2="${-phantom.testfailed}"/>
+        </condition>
+        <condition property="phantom.error">
+            <or>
+                <equals arg1="${phantom.exit}" arg2="${-phantom.exception}"/>
+                <equals arg1="${phantom.exit}" arg2="${-phantom.pagefailed}"/>
+            </or>
+        </condition>
+        <condition property="phantom.success">
+            <equals arg1="${phantom.exit}" arg2="0"/>
+        </condition>
+    </target>
+
+    <target name="-fail-status" if="phantom.testfailed">
+        <echo>One or more tests failed!</echo> 
+    </target>
+
+    <target name="-success-status" if="phantom.success">
+        <echo>All tests passed. Bam!</echo> 
+    </target>
+
+    <target name="-error-status" if="phantom.error">
+        <echo>There was a problem running the test pages. Rerunning verbosely...</echo> 
+        <exec executable="phantomjs" resultproperty="phantom.exit" errorproperty="test.errors">
+            <arg line="../scripts/phantomjs-driver.js ${test.page}"/>
+        </exec>
+    </target>
+</project>
